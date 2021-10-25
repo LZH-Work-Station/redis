@@ -34,3 +34,34 @@ try{
 }
 ```
 
+- 如果在try执行的一半还没有执行到finally机器就宕机了就不会执行finally去释放锁，所以就要加上一个过期时间
+
+```java
+try{
+    Boolean result = stringRedisTemplate.opsForValue().setIfAbsent("lockKey", "zehan");  // 等同于setnx
+    stringRedisTemplate.expire("lockKey", 10, TimeUnit.SECONDS);
+    // 如果result为false则加锁失败
+    if(!result){
+        return "error code"
+    }
+   
+}finally{
+    stringRedisTemplate.delete((locakKey); // 释放锁即删除这个key
+}
+```
+
+- 但如果 第一行代码刚刚setnx 然后刚开始执行expire命令的时候 机器挂了 就又完了，所以我们执行新命令。在第一行之后加上expire time，在redis底层保证了setnx和设置过期时间的原子性，所以不用担心宕机导致的没有设置成功expire Time的问题
+
+```java
+try{
+    Boolean result = stringRedisTemplate.opsForValue().setIfAbsent("lockKey", "zehan", 10, TimeUnit.SECONDS);
+    // 如果result为false则加锁失败
+    if(!result){
+        return "error code"
+    }
+   
+}finally{
+    stringRedisTemplate.delete((locakKey); // 释放锁即删除这个key
+}
+```
+
